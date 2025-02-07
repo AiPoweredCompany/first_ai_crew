@@ -10,19 +10,17 @@ Creating Tasks Cheat Sheet:
 - Ensure tasks are descriptive, providing clear instructions and expected deliverables.
 
 Goal:
-- Create a vectorize graph and the equivalent JSON file of the code structure and its dependencies related to the given repo.
+- Analyse local repo code from a RAG using a vectorize database
 
 Key Steps for Task Creation:
 1. Identify the Desired Outcome: Define what success looks like for your project.
-    - A JSON file with the code structure and its dependencies.
-    - The image (png format) of the corresponding vectorize graph 
+    - A vectorize database
 
 2. Task Breakdown: Divide the goal into smaller, manageable tasks that agents can execute.
-    - Fetch the repo: connect to the remote repo and get a clone in local
-    - Code analysis: analyse the code structure and its dependencies of the local repo
-    - Create vectorize graph: Generate the vectorize graph related to the code structure
-    - Create image of the graph: Generate a png image of this vectorize graph and save it in the actual repo
-
+    - identify all the files containing code to analyze
+    - save to vectorize database
+    - Analyse code from the database: return a list of dependencies
+    
 3. Assign Tasks to Agents: Match tasks with agents based on their roles and expertise.
 
 4. Task Description Template:
@@ -52,69 +50,53 @@ class BackTasks:
     def __tip_section(self):
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
 
-    def fetch_repo(self, agent, remote_repo):
+    def retrieve_python_files_content(self, agent, local_repo):
         return Task(
             description=dedent(
                 f"""
-            **Task**: Fetch the remote repo
-            **Description**: Fetch the remote repo to clone it in local. 
-            The clone is created in a new local repo with the same name as the remote one.
-
-            **Parameters**: 
-            - Remote repo: {remote_repo}
-
-            **Note**: {self.__tip_section()}
-        """
-            ),
-            agent=agent,
-        )
-
-    def code_analysis(self, agent, local_repo):
-        return Task(
-            description=dedent(
-                f"""
-                    **Task**:  Analyse the code structure and its dependencies for the local repo
-                    **Description**: Analyze the code structure of the local repo and all its dependencies. 
-                    All the dependencies between functions, classes, methods must be analysed in details to obtain 
-                    a very precise and detailed result.
-
+                    **Task**:  Retrieve all the files that contain python code from the local repo.
+                    **Description**: Get all the files from the local repo and keep only the python files, 
+                    these are the files to analyze.
                     **Parameters**: 
                     - Local repo: {local_repo}
 
-                    **Note**: {self.__tip_section()}
-        """
+                    **Note**: {self.__tip_section()}                
+    """
             ),
             agent=agent,
+            expected_output=f"""
+            a list of python files content
+    """
         )
 
-    def create_vectorize_graph(self, agent, analysis):
+    def save_data_to_database(self, agent):
         return Task(
             description=dedent(
                 f"""
-                    **Task**:  Create a vectorize graph of the analysis
-                    **Description**: Use the analysis to generate a detailed and precise vectorize graph of it.
-
-                    **Parameters**: 
-                    - Analysis: {analysis}
-
-                    **Note**: {self.__tip_section()}
+                        **Task**:  save or update all the coding files to the vectorized database.
+                        **Description**: Save or update all the data into the vectorized database Chroma
+                        **Note**: {self.__tip_section()}                
         """
             ),
             agent=agent,
+            context=[self.identify_files_to_analyse()]
         )
 
-    def create_image_of_graph(self, agent, vectorized_graph):
+    def code_analysis(self, agent):
         return Task(
             description=dedent(
                 f"""
-                    **Task**: Create an image of the vectorized graph
-                    **Description**: Create a png image of the whole vectorized graph.
-                    
-                    **Parameters**:
-                    - Vectorized Graph: {vectorized_graph}
-                    
+                    **Task**:  Analyse the code structure and its dependencies from the RAG
+                    **Description**: Analyze the code structure and all its dependencies. This code is coming from the vectorized database 
+                    All the dependencies between functions, classes, methods must be analysed in details to obtain 
+                    a very precise and detailed result.
                     **Note**: {self.__tip_section()}
         """
             ),
             agent=agent,
+            context=[self.save_data_to_database()]
+            expected_output=f"""
+                a bullet list with the dependencies for each existing class aqnd then a bullet list with all dependencies for each function
+        """
         )
+

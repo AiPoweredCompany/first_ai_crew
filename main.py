@@ -1,5 +1,9 @@
 from crewai import Crew
 from textwrap import dedent
+
+from huggingface_hub import save_torch_state_dict
+from numpy.lib.npyio import savez
+
 from agents import BackDevAgents
 from tasks import BackTasks
 
@@ -7,9 +11,8 @@ from tasks import BackTasks
 
 
 class ITCrew:
-    def __init__(self, remote_repo):
-        self.remote_repo = remote_repo
-        self.local_repo = None
+    def __init__(self, local_repo):
+        self.local_repo = local_repo
         self.analysis = None
         self.graph = None
 
@@ -22,35 +25,27 @@ class ITCrew:
         code_analyst = agents.code_analyst_agent()
 
         # Custom tasks include agent name and variables as input
-        fetch_remote_repo = tasks.fetch_repo(
+        retrieve_python_files_content = tasks.retrieve_python_files_content(
             code_analyst,
-            self.remote_repo
+        )
+
+        save_data_to_database = tasks.save_data_to_database(
+            code_analyst,
         )
 
         analyze_code = tasks.code_analysis(
             code_analyst,
-            self.local_repo
         )
 
-        create_vectorized_graph = tasks.create_vectorize_graph(
-            code_analyst,
-            self.analysis
-        )
-
-        create_image_from_graph = tasks.create_image_of_graph(
-            code_analyst,
-            self.graph
-        )
 
         # Define your custom crew here
         crew = Crew(
             agents=[code_analyst,
                     ],
             tasks=[
-                fetch_remote_repo,
+                retrieve_python_files_content,
+                save_data_to_database,
                 analyze_code,
-                create_vectorized_graph,
-                create_image_from_graph
             ],
             verbose=True,
         )
@@ -65,7 +60,7 @@ if __name__ == "__main__":
     print('-------------------------------')
     repo = input(
         dedent("""
-      What is the repo you want to work on?
+      What is the local repo you want to work on?
     """))
 
     IT_crew = ITCrew(repo)
